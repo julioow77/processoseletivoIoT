@@ -10,7 +10,7 @@
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
     [ "esp:RX", "$serialMonitor:TX", "", [] ],
     [ "hx711:VCC", "esp:5V", "red", [ "v0" ] ],
-    [ "hx711:GND", "esp:GND", "black", [ "v0" ] ],
+    [ "hx711:GND", "esp:GND.1", "black", [ "v0" ] ],
     [ "hx711:DT", "esp:21", "green", [ "v0" ] ],
     [ "hx711:SCK", "esp:22", "yellow", [ "v0" ] ]
   ],
