@@ -1,4 +1,4 @@
-# Processo Seletivo – Intensivo Maker | IoT  
+# Processo Seletivo – Intensivo Maker | IoT   
 
 ## Etapa Prática – Sistemas Embarcados
 
