@@ -260,85 +260,62 @@ Envie o link conforme as orientações do processo seletivo na plataforma do **P
 
 ## Relatório do Candidato
 
-O arquivo **`README.md` do seu repositório** deve ser utilizado como o  
-**relatório final do desafio técnico**.
-
-Preencha todas as seções abaixo de forma **clara, objetiva e técnica**.
-
-> **Dica importante**  
-> Não é necessário um relatório extenso.  
-> O principal critério é demonstrar **clareza nas decisões técnicas**, organização e entendimento do sistema embarcado desenvolvido.
-> Não mantenha os demais conteúdos escritos nesse arquivo README, aqui devem ser concentradas apenas informações referentes ao projeto desenvolvido.
-
----
-
 ### Identificação do Candidato
 
-- **Nome completo:**
-- **GitHub:**
+- **Nome completo:** Júlio César Mendes do Nascimento
+- **GitHub:** https://github.com/julioow77
 
 ---
 
 ## Visão Geral da Solução
 
-Descreva, em poucas palavras:
+- **Projeto desenvolvido:** Monitor de Estoque Kanban Inteligente
 
-- Qual é o objetivo do seu projeto
-- O que o sistema embarcado simulado faz
-- Como o usuário interage com ele (se aplicável)
+- **Objetivo:** Implementar um sistema automatizado para monitoramento de estoque baseado no método Kanban, acompanhando o peso e a disponibilidade dos itens de forma contínua e em tempo real.
+- **O que faz:** O firmware coleta dados de peso de uma célula de carga através de um conversor HX711, processa as leituras para evitar falsos positivos (glitches) e classifica o status do estoque em quatro estados principais: Regular, Alerta de Reposição, Carga Cheia ou Erro Crítico.
+- **Interação do usuário:** O sistema opera de forma autônoma. O usuário (ou sistema superior) interage através da leitura do log no monitor serial, que emite de maneira clara e exata os status do estoque a cada 500 milissegundos.
 
 ---
 
 ## Arquitetura do Sistema Embarcado
 
-Explique a arquitetura lógica do seu projeto, abordando:
-
-- Fluxo principal do programa (`main.py`)
-- Estrutura de estados, loops ou temporizações
-- Como os componentes interagem entre si
-
-Se desejar, utilize tópicos ou um pequeno diagrama em texto.
+- **Fluxo principal (`main.py`):** O sistema inicializa a classe customizada de comunicação com o HX711, emite a inicialização do Kanban e entra em um loop contínuo de avaliação. 
+- **Estrutura de estados e temporização:** O projeto baseia-se em uma máquina de estados conduzida por um loop `while True`. Foi implementada uma temporização não-bloqueante com `time.ticks_ms()` e `time.ticks_diff()`, operando em intervalos rígidos de 500ms para manter a leitura contínua sem travar a CPU principal. 
+- **Interação entre componentes:** O ESP32 realiza a leitura dos dados do HX711 via protocolo síncrono (bit-banging). Ao receber os dados brutos, aplica um fator de calibração (`/420`) para converter em gramas e toma as decisões de log (estado) baseadas nas faixas de peso (limiares de 150g, 5000g e zero absoluto).
 
 ---
 
 ## Componentes Utilizados na Simulação
 
-Liste os principais componentes definidos no `diagram.json`, por exemplo:
+Os componentes mapeados e interligados no arquivo `diagram.json` incluem:
 
-- Tipo de placa utilizada
-- LEDs, botões, sensores, atuadores, etc.
-- Função de cada componente no sistema
+- **Microcontrolador (ESP32):** Cérebro do sistema, encarregado de rodar o interpretador MicroPython, orquestrar os loops de leitura e processar as lógicas condicionais.
+- **Sensor (Módulo HX711):** Amplificador e conversor Analógico-Digital (ADC) de 24 bits. Serve como ponte entre o ESP32 e as grandezas físicas (simuladas) da célula de carga virtual. Pinos configurados em DT=21, SCK=22, VCC=5V e GND=GND.1.
 
 ---
 
 ## Decisões Técnicas Relevantes
 
-Explique brevemente decisões importantes tomadas durante o desenvolvimento, como:
+Para estabilizar as leituras e aprovar o código contra a automação de testes do GitHub Actions (Wokwi CLI), aplicou-se:
 
-- Organização do código
-- Uso de funções, estados ou constantes
-- Estratégias para temporização ou controle lógico
+- **Proteção de interrupções (`disable_irq`):** Durante a captura sensível (leitura de 24 bits do pino), as interrupções globais são temporariamente desativadas. Isso evita que processamentos de fundo corrompam a leitura estrita do bit-banging, prevenindo timeouts por perda de sincronia.
+- **Filtro de Debounce:** Durante grandes saltos de massa no simulador, leituras "fantasmas" de zero podiam ocorrer. Foi implementada uma variável `contagem_zero` que exige, no mínimo, duas leituras de erro consecutivas (1 segundo) para acionar um alerta crítico, mascarando oscilações espúrias.
+- **Formatação exata (String Matching):** Toda a saída do console (os logs no monitor serial) foi formatada de forma rigorosa para refletir exatamente o que os testes automatizados da integração contínua (CI) esperavam, garantindo o sucesso das Actions.
 
 ---
 
 ## Resultados Obtidos
 
-Descreva o comportamento final do sistema:
-
-- O que funciona corretamente
-- Quais requisitos foram atendidos
-- Resultado observado na simulação do Wokwi
+- **O que funciona:** A leitura contínua, detecção de consumo regular dinâmico, identificação rápida de reposição e proteção contra remoção acidental da caixa.
+- **Requisitos atendidos:** O firmware respeitou a arquitetura não-bloqueante exigida, operando de forma perfeitamente assíncrona. As saídas de serial estão milimetricamente alinhadas com as mensagens estabelecidas pelo protocolo do projeto.
+- **Resultados na simulação (Wokwi CI):** O código atingiu 100% de sucesso na esteira de integração contínua, com aprovação irrestrita nos três cenários de teste ("Consumo Parcial", "Ciclo Completo" e "Falha Crítica").
 
 ---
 
 ## Comentários Adicionais (Opcional)
 
-Utilize este espaço para comentar, se desejar:
-
-- Dificuldades encontradas
-- Limitações da solução
-- Melhorias que você faria com mais tempo
-- Principais aprendizados durante o desafio
+- **Dificuldades encontradas:** Compreender o comportamento de transição do peso no ambiente virtualizado, que gera um intervalo minúsculo de "falha" passível de derrubar o sistema se não houver um filtro de ruídos bem feito na lógica. Adequar-se aos tempos de Timeout do Wokwi-CLI também exigiu análise minuciosa dos logs.
+- **Principais aprendizados:** A consolidação do uso de temporizadores não-bloqueantes (`ticks_ms`) em vez de atrasos fixos (`sleep()`) e a manipulação direta do estado de interrupção da placa (hardware puro) pelo MicroPython.
 
 ---
 
