@@ -66,7 +66,5 @@ while True:
                     estado_atual = "CARGA_CHEIA"
                     
                 elif 150 < peso_gramas < 5000:
-                    msg_regular = f"Status: Estoque Regular ({peso_gramas}g)"
-                    if estado_atual != msg_regular:
-                        print(msg_regular)
-                        estado_atual = msg_regular
+                    print(f"Status: Estoque Regular ({peso_gramas}g)")
+                    estado_atual = "REGULAR"
