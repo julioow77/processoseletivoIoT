@@ -13,7 +13,6 @@ class HX711:
             return None
         
         val = 0
-        
         state = machine.disable_irq()
         for _ in range(24):
             self.pSCK.value(1)
@@ -67,6 +66,7 @@ while True:
                     estado_atual = "CARGA_CHEIA"
                     
                 elif 150 < peso_gramas < 5000:
-                    if estado_atual != "REGULAR_" + str(peso_gramas):
-                        print(f"Status: Estoque Regular ({peso_gramas}g)")
-                        estado_atual = "REGULAR_" + str(peso_gramas)
+                    msg_regular = f"Status: Estoque Regular ({peso_gramas}g)"
+                    if estado_atual != msg_regular:
+                        print(msg_regular)
+                        estado_atual = msg_regular
