@@ -1,4 +1,5 @@
 from machine import Pin
+import machine
 import time
 
 class HX711:
@@ -12,6 +13,8 @@ class HX711:
             return None
         
         val = 0
+        
+        state = machine.disable_irq()
         for _ in range(24):
             self.pSCK.value(1)
             val = (val << 1) | self.pOUT.value()
@@ -19,6 +22,7 @@ class HX711:
         
         self.pSCK.value(1)
         self.pSCK.value(0)
+        machine.enable_irq(state)
         
         if val & (1 << 23):
             val -= 1 << 24
@@ -30,6 +34,7 @@ print("Sistema Kanban Inicializado")
 
 estado_atual = "DESCONHECIDO"
 ultimo_tempo_leitura = time.ticks_ms()
+contagem_zero = 0 
 
 while True:
     tempo_atual = time.ticks_ms()
@@ -43,21 +48,25 @@ while True:
             peso_gramas = int(leitura_bruta / 420)
             
             if peso_gramas == 0:
-                if estado_atual != "ERRO":
-                    print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
-                    estado_atual = "ERRO"
-            
-            elif peso_gramas <= 150:
-                if estado_atual != "ALERTA_REPOSICAO":
-                    print("Evento de reposição disparado! Caixa vazia detectada.")
-                    estado_atual = "ALERTA_REPOSICAO"
-                    
-            elif peso_gramas >= 5000:
-                if estado_atual == "ALERTA_REPOSICAO":
-                    print("Abastecimento concluído. Caixa cheia.")
-                estado_atual = "CARGA_CHEIA"
+                contagem_zero += 1
+                if contagem_zero >= 2:
+                    if estado_atual != "ERRO":
+                        print("ALERTA: Caixa ausente ou erro de calibração no sensor HX711!")
+                        estado_atual = "ERRO"
+            else:
+                contagem_zero = 0
                 
-            elif 150 < peso_gramas < 5000:
-                if estado_atual != "REGULAR_" + str(peso_gramas):
-                    print(f"Status: Estoque Regular ({peso_gramas}g)")
-                    estado_atual = "REGULAR_" + str(peso_gramas)
+                if peso_gramas <= 150:
+                    if estado_atual != "ALERTA_REPOSICAO":
+                        print("Evento de reposição disparado! Caixa vazia detectada.")
+                        estado_atual = "ALERTA_REPOSICAO"
+                        
+                elif peso_gramas >= 5000:
+                    if estado_atual == "ALERTA_REPOSICAO":
+                        print("Abastecimento concluído. Caixa cheia.")
+                    estado_atual = "CARGA_CHEIA"
+                    
+                elif 150 < peso_gramas < 5000:
+                    if estado_atual != "REGULAR_" + str(peso_gramas):
+                        print(f"Status: Estoque Regular ({peso_gramas}g)")
+                        estado_atual = "REGULAR_" + str(peso_gramas)
